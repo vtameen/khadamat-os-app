@@ -14,6 +14,7 @@ import { Attendance } from './src/screens/Attendance';
 import { Alerts } from './src/screens/Alerts';
 import { Me } from './src/screens/Me';
 import { WebJob } from './src/screens/WebJob';
+import { CampOps } from './src/screens/CampOps';
 import { Btn, Loading } from './src/ui';
 import { C } from './src/theme';
 
@@ -44,7 +45,7 @@ function Shell() {
 
   if (!ready) return <Loading />;
   if (!user) {
-    if (campStaff) return <WebJob path="/camp/" title="Camp staff" onClose={() => setCampStaff(false)} />;
+    if (campStaff) return <CampOps onExit={() => setCampStaff(false)} />;
     return <Login onCampStaff={() => setCampStaff(true)} />;
   }
   if (user.mustChange) {

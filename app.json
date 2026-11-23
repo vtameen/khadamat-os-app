@@ -13,7 +13,8 @@
         "NSCameraUsageDescription": "Take photos of bills, rooms, bins and checkpoints for Khadamat OS records.",
         "NSPhotoLibraryUsageDescription": "Attach photos to Khadamat OS records.",
         "NSMicrophoneUsageDescription": "Record voice notes for camp reports.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Confirm a checkpoint visit was made inside the camp."
       }
     },
     "android": {
@@ -28,14 +29,19 @@
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-location"
     ]
   }
 }
