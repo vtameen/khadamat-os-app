@@ -5,7 +5,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { ApiError, OfflineError } from '../api';
 import { campLogin, campLogout, campMe, CampMe, campToday, CampToday, Checkpoint, position, qrCode, Slot, uploadPhoto, visitStart, visitSubmit } from '../camp';
 import { Btn, Card, Chip, Label, Loading, Notice, Progress, Title } from '../ui';
-import { WebJob } from './WebJob';
 import { C, Tone } from '../theme';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : e instanceof OfflineError ? 'No signal. Try again when you have a connection.' : 'Something went wrong. Try again.');
@@ -15,7 +14,7 @@ const hhmm = (ts: number) => { const d = new Date(ts * 1000); return String(d.ge
 export function CampOps({ onExit }: { onExit: () => void }) {
   const [me, setMe] = useState<CampMe | null | 'out'>(null);
   const [camp, setCamp] = useState('');
-  const [view, setView] = useState<'home' | 'scan' | 'more'>('home');
+  const [view, setView] = useState<'home' | 'scan'>('home');
   const [cp, setCp] = useState<Checkpoint | null>(null);
 
   const load = useCallback(async () => {
@@ -28,8 +27,7 @@ export function CampOps({ onExit }: { onExit: () => void }) {
   if (me === 'out') return <CampLogin onDone={load} onExit={onExit} />;
   if (cp) return <Visit cp={cp} onClose={() => setCp(null)} />;
   if (view === 'scan') return <Scan onCancel={() => setView('home')} onFound={(c) => { setCp(c); setView('home'); }} />;
-  if (view === 'more') return <WebJob path="/camp/" title="Camp Ops" onClose={() => setView('home')} />;
-  return <CampHome me={me} camp={camp} setCamp={setCamp} onScan={() => setView('scan')} onMore={() => setView('more')}
+  return <CampHome me={me} camp={camp} setCamp={setCamp} onScan={() => setView('scan')}
     onSignOut={async () => { try { await campLogout(); } catch { /* signed out locally anyway */ } setMe('out'); }} />;
 }
 
@@ -54,8 +52,8 @@ function CampLogin({ onDone, onExit }: { onDone: () => void; onExit: () => void 
   );
 }
 
-function CampHome({ me, camp, setCamp, onScan, onMore, onSignOut }: {
-  me: CampMe; camp: string; setCamp: (c: string) => void; onScan: () => void; onMore: () => void; onSignOut: () => void;
+function CampHome({ me, camp, setCamp, onScan, onSignOut }: {
+  me: CampMe; camp: string; setCamp: (c: string) => void; onScan: () => void; onSignOut: () => void;
 }) {
   const [data, setData] = useState<CampToday | null>(null);
   const [error, setError] = useState(''); const [refreshing, setRefreshing] = useState(false);
@@ -95,9 +93,9 @@ function CampHome({ me, camp, setCamp, onScan, onMore, onSignOut }: {
           <View style={{ gap: 8 }}>
             <Label>Also today</Label>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Pressable accessibilityRole="button" onPress={onMore} style={s.tile}><Text style={s.tileTitle}>Complaints</Text><Text style={s.sub}>{(tk?.live ?? 0) + ' open' + (tk?.overdue ? ' · ' + tk.overdue + ' late' : '')}</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={onMore} style={s.tile}><Text style={s.tileTitle}>Camp staff</Text><Text style={s.sub}>{att && att.total ? att.marked + ' of ' + att.total + ' marked' : 'Attendance'}</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={onMore} style={s.tile}><Text style={s.tileTitle}>Worker note</Text><Text style={s.sub}>For grading</Text></Pressable>
+              <View style={s.tile}><Text style={s.tileTitle}>Complaints</Text><Text style={s.sub}>{(tk?.live ?? 0) + ' open' + (tk?.overdue ? ' · ' + tk.overdue + ' late' : '')}</Text></View>
+              <View style={s.tile}><Text style={s.tileTitle}>Camp staff</Text><Text style={s.sub}>{att && att.total ? att.marked + ' of ' + att.total + ' marked' : 'Attendance'}</Text></View>
+              <View style={s.tile}><Text style={s.tileTitle}>Worker note</Text><Text style={s.sub}>For grading</Text></View>
             </View>
           </View>
         ) : null}
