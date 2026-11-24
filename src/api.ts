@@ -1,6 +1,7 @@
 // Thin client for the live Khadamat OS API. The session is the site's own cookie,
-// which React Native keeps in the platform cookie store (shared with in-app web pages).
-export const SITE = 'https://khadamatos.com';
+// which React Native keeps in the platform cookie store.
+// EXPO_PUBLIC_SITE only for design checks of the web build against sample data.
+export const SITE = process.env.EXPO_PUBLIC_SITE || 'https://khadamatos.com';
 
 export class ApiError extends Error {
   status: number;

@@ -2,109 +2,127 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { api, OfflineError } from '../api';
 import { useSession } from '../session';
-import type { Job } from '../jobs';
-import { loadWork, isDecision, moduleLabel, WorkItem } from '../work';
-import { Card, Chip, Label, Notice, Title } from '../ui';
-import { C } from '../theme';
+import { Job, seesSijil } from '../jobs';
+import { Approval, loadApprovals } from '../approvals';
+import { useLayout } from '../layout';
+import { Icon } from '../icons';
+import { Caption, Group, IconSquare, LargeTitle, Notice, Pill, Progress, Row, Section } from '../ui';
+import { C, NUM, PHI, R, S, T } from '../theme';
 
-type Glimpse = { v?: string | number; u?: string; l?: string; tone?: string; pct?: number } | null;
+type Glimpse = { v?: string; u?: string; l?: string; tone?: string; pct?: number } | null;
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-export function Today({ jobs, onOpenJob, onOpenLink, onOpenApprovals, queuedCount }: {
-  jobs: Job[]; onOpenJob: (j: Job) => void; onOpenLink: (href: string, title: string) => void; onOpenApprovals: () => void; queuedCount: number;
+export function Today({ jobs, onOpenJob, onOpenApproval, onOpenApprovals, onOpenMe, queuedCount }: {
+  jobs: Job[]; onOpenJob: (j: Job) => void; onOpenApproval: (a: Approval) => void; onOpenApprovals: () => void; onOpenMe: () => void; queuedCount: number;
 }) {
   const { user } = useSession();
-  const [work, setWork] = useState<WorkItem[]>([]);
-  const [att, setAtt] = useState<Glimpse>(null);
+  const { width, short } = useLayout();
+  const [waiting, setWaiting] = useState<Approval[] | null>(null);
+  const [sum, setSum] = useState<Record<string, Glimpse>>({});
   const [offline, setOffline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const hasAttendance = jobs.some((j) => j.key === 'attendance');
 
   const load = useCallback(async () => {
     try {
-      const [w, hs] = await Promise.all([loadWork().catch((e) => { if (e instanceof OfflineError) throw e; return [] as WorkItem[]; }),
-        api<Record<string, Glimpse>>('/home-summary').catch((e) => { if (e instanceof OfflineError) throw e; return {} as Record<string, Glimpse>; })]);
-      setWork(w); setAtt(hs?.attendance ?? null); setOffline(false);
-    } catch { setOffline(true); }
-  }, []);
+      const [a, hs] = await Promise.all([
+        loadApprovals(user?.id ?? ''),
+        api<Record<string, Glimpse>>('/home-summary').catch((e) => { if (e instanceof OfflineError) throw e; return {}; }),
+      ]);
+      setWaiting(a); setSum(hs ?? {}); setOffline(false);
+    } catch { setOffline(true); setWaiting((w) => w ?? []); }
+  }, [user?.id]);
   useEffect(() => { void load(); }, [load]);
 
-  const decisions = work.filter(isDecision);
-  const others = work.filter((w) => !isDecision(w)).slice(0, 5);
-  const date = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const now = new Date();
+  const kicker = DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()];
   const initials = (user?.name ?? user?.username ?? '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-  const attJob = jobs.find((j) => j.key === 'attendance');
+  const att = jobs.find((j) => j.key === 'attendance') ? sum.attendance : null;
+  const sijil = user && seesSijil(user) ? sum.sijil : null;
+  const n = waiting?.length ?? 0;
+  // The Today card is a golden rectangle (width ÷ 1.618); on a short screen (iPhone Duo closed) a φ² strip.
+  const cardW = Math.min(width, 560) - 40;
+  const cardH = Math.round(short ? cardW / (PHI * PHI) : cardW / PHI);
+
+  const hero = att ? (
+    <Pressable accessibilityRole="button" accessibilityLabel={'Attendance, ' + (att.v ?? '') + ' ' + (att.u ?? '') + ', ' + (att.l ?? '')}
+      onPress={() => { const j = jobs.find((x) => x.key === 'attendance'); if (j) onOpenJob(j); }}
+      style={({ pressed }) => [s.hero, { minHeight: cardH, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+      <Text style={[T.kicker, { color: C.onTealSoft }]}>Attendance</Text>
+      <Text style={[T.hero, NUM, { color: '#FFFFFF', marginTop: S.s }]}>{att.v ?? '—'}<Text style={s.heroUnit}> {att.u ?? ''}</Text></Text>
+      <Text style={[T.sub, { color: '#E4F3F1', marginTop: S.xs }]}>{att.l ?? ''}</Text>
+      {typeof att.pct === 'number' ? <View style={{ marginTop: S.m }}><Progress pct={att.pct} color="#FFFFFF" track="rgba(255,255,255,0.25)" /></View> : null}
+      <View style={{ flex: 1, minHeight: S.m }} />
+      <View style={s.heroBtn}><Text style={s.heroBtnText}>Mark attendance</Text></View>
+    </Pressable>
+  ) : n > 0 ? (
+    <Pressable accessibilityRole="button" accessibilityLabel={n + ' waiting for your signature'} onPress={onOpenApprovals}
+      style={({ pressed }) => [s.hero, { minHeight: cardH, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+      <Text style={[T.kicker, { color: C.onTealSoft }]}>Waiting for you</Text>
+      <Text style={[T.hero, NUM, { color: '#FFFFFF', marginTop: S.s }]}>{n}<Text style={s.heroUnit}> to sign</Text></Text>
+      <View style={{ flex: 1, minHeight: S.m }} />
+      <View style={s.heroBtn}><Text style={s.heroBtnText}>Review and sign</Text></View>
+    </Pressable>
+  ) : null;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.ground }} contentContainerStyle={s.wrap}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-      <Title title="Today" sub={date} right={<View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>} />
-      {offline ? <Notice text="No signal. Showing what was loaded last; marks you make are saved on this phone." /> : null}
-      {queuedCount > 0 ? <Notice text={queuedCount + ' saved on this phone, will send when back online.'} /> : null}
+      refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.teal} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
+      <LargeTitle kicker={kicker} title="Today" right={
+        <Pressable accessibilityRole="button" accessibilityLabel="Me" onPress={onOpenMe} style={s.avatar}><Text style={s.avatarText}>{initials}</Text></Pressable>} />
+      {offline ? <Notice icon="warn" text="No signal. Showing what was loaded last; marks you make are kept on this phone." /> : null}
+      {queuedCount > 0 ? <Notice tone="info" text={queuedCount + ' saved on this phone, sent when the signal is back.'} /> : null}
 
-      {hasAttendance && attJob ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Mark attendance" onPress={() => onOpenJob(attJob)} style={s.hero}>
-          <Text style={s.heroKicker}>Attendance</Text>
-          <Text style={s.heroBig}>{att?.v !== undefined ? String(att.v) : 'Mark today'}</Text>
-          <Text style={s.heroSub}>{att?.l ?? 'Open daily marking'}</Text>
-          <View style={s.heroBtn}><Text style={s.heroBtnText}>Mark attendance</Text></View>
-        </Pressable>
-      ) : decisions.length > 0 ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Open approvals" onPress={onOpenApprovals} style={s.hero}>
-          <Text style={s.heroKicker}>Waiting for your decision</Text>
-          <Text style={s.heroBig}>{decisions.length + (decisions.length === 1 ? ' approval' : ' approvals')}</Text>
-          <View style={s.heroBtn}><Text style={s.heroBtnText}>Review</Text></View>
-        </Pressable>
+      {hero}
+
+      {n > 0 ? (
+        <Section title="Waiting for you">
+          <Group>
+            {(waiting ?? []).slice(0, 3).map((a) => (
+              <Row key={a.kind + a.id} title={a.kicker + ' · ' + a.title} sub={a.sub} strong chevron onPress={() => onOpenApproval(a)}
+                right={<Pill label={a.days ? a.days + 'd' : a.pill} tone={a.days ? 'bad' : 'info'} />} />
+            ))}
+            {n > 3 ? <Row title={'See all ' + n} onPress={onOpenApprovals} chevron /> : null}
+          </Group>
+        </Section>
+      ) : waiting !== null && n === 0 && !att ? (
+        <View style={s.calm}><Icon name="check" size={34} color={C.teal} stroke={2} /><Text style={T.section}>Nothing waiting for you</Text><Caption>New approvals show up here and as a notification.</Caption></View>
       ) : null}
 
-      {hasAttendance && decisions.length > 0 ? (
-        <Pressable accessibilityRole="button" onPress={onOpenApprovals}><Card style={s.rowCard}>
-          <Text style={s.rowText}>{decisions.length + (decisions.length === 1 ? ' approval waiting' : ' approvals waiting')}</Text><Chip label="Review" tone="warn" />
-        </Card></Pressable>
-      ) : null}
-
-      {others.length > 0 ? (
-        <View style={{ gap: 8 }}>
-          <Label>Needs you</Label>
-          <Card style={{ padding: 0 }}>
-            {others.map((w, i) => (
-              <Pressable key={w.id || i} accessibilityRole="button" onPress={() => onOpenLink(w.action?.href ?? w.link, moduleLabel(w.module))}
-                style={[s.needRow, i > 0 ? { borderTopWidth: 1, borderTopColor: C.line } : null]}>
-                <View style={{ flex: 1 }}><Text style={s.rowText}>{w.title}</Text>{w.sub ? <Text style={s.rowSub} numberOfLines={2}>{w.sub}</Text> : null}</View>
-                <Chip label={moduleLabel(w.module)} tone={w.tone} />
+      {jobs.length > 0 ? (
+        <Section title="Your jobs">
+          <View style={s.grid}>
+            {jobs.map((j) => (
+              <Pressable key={j.key} accessibilityRole="button" accessibilityLabel={j.label + ', ' + j.sub} onPress={() => onOpenJob(j)}
+                style={({ pressed }) => [s.job, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+                <IconSquare name={j.icon} color={j.color} />
+                <View><Text style={[T.bodyStrong, { fontSize: 15, lineHeight: 20 }]} numberOfLines={1}>{j.label}</Text><Text style={T.caption} numberOfLines={1}>{j.sub}</Text></View>
               </Pressable>
             ))}
-          </Card>
-        </View>
+          </View>
+        </Section>
       ) : null}
 
-      <View style={{ gap: 8 }}>
-        <Label>Your jobs</Label>
-        <View style={s.grid}>
-          {jobs.map((j) => (
-            <Pressable key={j.key} accessibilityRole="button" accessibilityLabel={j.label} onPress={() => onOpenJob(j)} style={s.job}>
-              <Text style={s.jobTitle}>{j.label}</Text><Text style={s.rowSub}>{j.sub}</Text>
-            </Pressable>
-          ))}
+      {/* Sijil stays quiet (Ameen, 24 Nov 2026): no alerts for anyone, just this line. */}
+      {sijil && sijil.tone !== 'ok' ? (
+        <View style={{ gap: S.s }}>
+          <Group><Row title="Records to renew" sub={(sijil.v && sijil.v !== '0' ? sijil.v + ' expired · ' : '') + (sijil.l ?? '').split(' · ')[0]}
+            icon={<IconSquare name="doc" color={C.grey} size={29} />} /></Group>
+          <Caption style={{ marginLeft: 16 }}>From Sijil. Shown here only — no reminders are sent.</Caption>
         </View>
-      </View>
+      ) : null}
     </ScrollView>
   );
 }
 const s = StyleSheet.create({
-  wrap: { padding: 20, gap: 18, paddingBottom: 32 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.tealTint, alignItems: 'center', justifyContent: 'center' },
+  wrap: { padding: 20, paddingTop: S.l, gap: S.l, paddingBottom: 120, width: '100%', maxWidth: 600, alignSelf: 'center' },
+  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.tealTint, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: C.teal, fontWeight: '700', fontSize: 15 },
-  hero: { backgroundColor: C.teal, borderRadius: 22, padding: 22, gap: 8 },
-  heroKicker: { color: C.onTealSoft, fontSize: 13, fontWeight: '500' },
-  heroBig: { color: '#FFFFFF', fontSize: 34, fontWeight: '700' },
-  heroSub: { color: C.onTealSoft, fontSize: 15 },
-  heroBtn: { minHeight: 54, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  heroBtnText: { color: C.teal, fontSize: 16, fontWeight: '700' },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  needRow: { minHeight: 60, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowText: { fontSize: 15, color: C.ink, fontWeight: '500' },
-  rowSub: { fontSize: 13, color: C.muted, marginTop: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  job: { flexGrow: 1, flexBasis: 150, minHeight: 84, borderRadius: 18, backgroundColor: C.card, padding: 14, justifyContent: 'space-between' },
-  jobTitle: { fontSize: 16, fontWeight: '600', color: C.ink },
+  hero: { backgroundColor: C.teal, borderRadius: R.card, padding: S.l },
+  heroUnit: { fontSize: 21, fontWeight: '600', letterSpacing: -0.3, color: C.onTealSoft },
+  heroBtn: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: R.chip, paddingHorizontal: S.l, paddingVertical: 11 },
+  heroBtnText: { color: C.teal, fontSize: 17, lineHeight: 22, fontWeight: '600' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.s },
+  job: { flexGrow: 1, flexBasis: 100, minHeight: 89, backgroundColor: C.card, borderRadius: R.card, padding: S.m, gap: S.s, justifyContent: 'space-between' },
+  calm: { alignItems: 'center', gap: S.xs, paddingVertical: S.xl },
 });

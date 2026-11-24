@@ -14,7 +14,8 @@
         "NSPhotoLibraryUsageDescription": "Attach photos to Khadamat OS records.",
         "NSMicrophoneUsageDescription": "Record voice notes for camp reports.",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "Confirm a checkpoint visit was made inside the camp."
+        "NSLocationWhenInUseUsageDescription": "Confirm a checkpoint visit was made inside the camp.",
+        "NSFaceIDUsageDescription": "Open Khadamat OS with Face ID instead of your password."
       }
     },
     "android": {
@@ -31,7 +32,8 @@
         "RECORD_AUDIO",
         "POST_NOTIFICATIONS",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "USE_BIOMETRIC"
       ]
     },
     "web": {
@@ -41,7 +43,19 @@
       "expo-notifications",
       "expo-camera",
       "expo-image-picker",
-      "expo-location"
+      "expo-location",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Open Khadamat OS with Face ID instead of your password."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Open Khadamat OS with Face ID instead of your password."
+        }
+      ]
     ]
   }
 }
