@@ -27,7 +27,8 @@ export function Today({ jobs, onOpenJob, onOpenApproval, onOpenApprovals, onOpen
     try {
       const [a, hs] = await Promise.all([
         loadApprovals(user?.id ?? ''),
-        api<Record<string, Glimpse>>('/home-summary').catch((e) => { if (e instanceof OfflineError) throw e; return {}; }),
+        // The server sends {summary: {...}, date, ts}; the module lines are inside summary.
+        api<any>('/home-summary').then((r) => (r && typeof r.summary === 'object' && r.summary) || r || {}).catch((e) => { if (e instanceof OfflineError) throw e; return {}; }),
       ]);
       setWaiting(a); setSum(hs ?? {}); setOffline(false);
     } catch { setOffline(true); setWaiting((w) => w ?? []); }
