@@ -42,7 +42,7 @@ export function Approvals({ openFirst, onOpened, onDocOpen }: { openFirst?: Appr
   const list = (
     <ScrollView style={{ flex: 1, backgroundColor: C.ground }} contentContainerStyle={s.wrap}
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.teal} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-      <LargeTitle title="Approvals" sub={items ? (items.length ? items.length + ' waiting for you · oldest first' : undefined) : undefined} />
+      <LargeTitle title={user?.canExec ? 'To sign' : 'Approvals'} sub={items ? (items.length ? items.length + ' waiting for you · oldest first' : undefined) : undefined} />
       {offline ? <Notice icon="warn" text="No signal. Approvals need a connection." /> : null}
       {segs.length > 2 ? <Segmented items={segs} value={filter} onChange={setFilter} /> : null}
       {items === null ? <View style={{ height: 200 }}><Loading /></View>

@@ -4,7 +4,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 // Thin line icons from the approved mockups (24 Nov 2026). Stroke only, rounded ends.
 export type IconName =
   | 'today' | 'approvals' | 'alerts' | 'me' | 'chevron' | 'back' | 'attendance' | 'pin' | 'camera' | 'list' | 'doc'
-  | 'faceid' | 'lock' | 'bell' | 'clock' | 'check' | 'warn' | 'scan' | 'more' | 'transfer' | 'building' | 'close' | 'pen' | 'search';
+  | 'faceid' | 'lock' | 'bell' | 'clock' | 'check' | 'warn' | 'scan' | 'more' | 'transfer' | 'building' | 'close' | 'pen' | 'search' | 'grid';
 
 export function Icon({ name, size = 24, color = '#1C1C1E', stroke = 1.8 }: { name: IconName; size?: number; color?: string; stroke?: number }) {
   const p = { fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -31,6 +31,7 @@ export function Icon({ name, size = 24, color = '#1C1C1E', stroke = 1.8 }: { nam
     case 'more': body = <><Circle cx={5} cy={12} r={1.6} fill={color} /><Circle cx={12} cy={12} r={1.6} fill={color} /><Circle cx={19} cy={12} r={1.6} fill={color} /></>; break;
     case 'transfer': body = <Path d="M7 7h10l-3-3M17 17H7l3 3" {...p} />; break;
     case 'building': body = <><Path d="M5 21V5a1 1 0 0 1 1-1h9l4 4v13" {...p} /><Path d="M14 13h.01M3 21h18" {...p} /></>; break;
+    case 'grid': body = <><Rect x={4} y={4} width={7} height={7} rx={2} {...p} /><Rect x={13} y={4} width={7} height={7} rx={2} {...p} /><Rect x={4} y={13} width={7} height={7} rx={2} {...p} /><Rect x={13} y={13} width={7} height={7} rx={2} {...p} /></>; break;
     case 'search': body = <><Circle cx={11} cy={11} r={6.5} {...p} /><Path d="M20 20l-4.2-4.2" {...p} /></>; break;
   }
   return <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden importantForAccessibility="no">{body}</Svg>;
